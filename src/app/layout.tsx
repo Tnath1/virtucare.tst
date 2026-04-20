@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Link from "next/link";
+
+import { SiteNav } from "@/components/shared/site-nav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,22 +34,8 @@ export default function RootLayout({
         suppressHydrationWarning
         className="flex min-h-full flex-col bg-slate-50 text-slate-900"
       >
-        <header className="border-b border-slate-200 bg-white">
-          <nav className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
-            <Link href="/" className="text-lg font-semibold text-slate-900">
-              VirtuCare
-            </Link>
-            <div className="flex items-center gap-4 text-sm font-medium text-slate-600">
-              <Link href="/" className="hover:text-teal-700">
-                Doctors
-              </Link>
-              <Link href="/appointments" className="hover:text-teal-700">
-                Appointments
-              </Link>
-            </div>
-          </nav>
-        </header>
-        <main className="flex-1">{children}</main>
+        <SiteNav />
+        <main className="flex-1 pt-16">{children}</main>
       </body>
     </html>
   );
