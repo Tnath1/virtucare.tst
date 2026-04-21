@@ -4,6 +4,7 @@ const STORAGE_KEY = "virtucare:appointments";
 const STORAGE_EVENT = "virtucare:appointments-changed";
 
 type AppointmentInput = Omit<Appointment, "id" | "createdAt">;
+type AppointmentSlot = Pick<Appointment, "doctorId" | "date" | "time">;
 
 function canUseStorage() {
   return typeof window !== "undefined" && Boolean(window.localStorage);
@@ -64,14 +65,45 @@ export function subscribeToAppointments(onStoreChange: () => void) {
   };
 }
 
+export function hasAppointmentConflict(
+  appointments: Appointment[],
+  appointmentSlot: AppointmentSlot,
+) {
+  return appointments.some(
+    (appointment) =>
+      appointment.doctorId === appointmentSlot.doctorId &&
+      appointment.date === appointmentSlot.date &&
+      appointment.time === appointmentSlot.time,
+  );
+}
+
+export function getBookedSlotsForDoctorDate(
+  appointments: Appointment[],
+  doctorId: string,
+  date: string,
+) {
+  return appointments
+    .filter(
+      (appointment) =>
+        appointment.doctorId === doctorId && appointment.date === date,
+    )
+    .map((appointment) => appointment.time);
+}
+
 export function addAppointment(appointmentInput: AppointmentInput) {
+  const existingAppointments = getAppointments();
+
+  if (hasAppointmentConflict(existingAppointments, appointmentInput)) {
+    throw new Error("This appointment slot is already booked.");
+  }
+
   const nextAppointment: Appointment = {
     id: createId(),
     createdAt: new Date().toISOString(),
     ...appointmentInput,
   };
 
-  saveAppointments([nextAppointment, ...getAppointments()]);
+  saveAppointments([nextAppointment, ...existingAppointments]);
   return nextAppointment;
 }
 
