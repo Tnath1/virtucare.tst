@@ -15,6 +15,7 @@ export function SlotPicker({
   selectedSlot,
   onSelect,
 }: SlotPickerProps) {
+  // Sets make each slot check cheap and keep the render logic readable.
   const bookedSlotSet = new Set(bookedSlots);
   const unavailableSlotSet = new Set(unavailableSlots);
 

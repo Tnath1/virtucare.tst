@@ -16,6 +16,8 @@ import { formatAppointmentDate } from "@/lib/utils/date";
 import { delay } from "@/lib/utils/delay";
 import type { Appointment } from "@/types/appointment";
 
+// Distinguishes "browser storage has not hydrated yet" from "there are no
+// appointments", which prevents an empty-state flash on refresh.
 const APPOINTMENTS_LOADING_SNAPSHOT = "__appointments_loading__";
 const CANCEL_MUTATION_DELAY_MS = 1000;
 
@@ -51,6 +53,7 @@ export function AppointmentsList() {
 
     setIsCanceling(true);
 
+    // Simulates waiting for a delete endpoint before updating localStorage.
     await delay(CANCEL_MUTATION_DELAY_MS);
     cancelAppointment(appointmentToCancel.id);
     setIsCanceling(false);
