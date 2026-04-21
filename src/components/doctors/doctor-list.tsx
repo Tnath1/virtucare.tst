@@ -15,6 +15,8 @@ type DoctorListProps = {
 const DOCTOR_FETCH_DELAY_MS = 2000;
 const SKELETON_CARD_COUNT = 6;
 
+// Lightweight in-memory cache to mimic RTK Query: loading shows once per
+// browser session and resets on a full page refresh.
 let hasLoadedDoctors = false;
 
 export function DoctorList({ doctors }: DoctorListProps) {

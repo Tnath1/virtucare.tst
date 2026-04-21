@@ -30,6 +30,7 @@ const BOOKING_MUTATION_DELAY_MS = 1200;
 
 export function BookingForm({ doctor }: BookingFormProps) {
   const router = useRouter();
+  // Default to the first slot that passes today's 20-minute booking cutoff.
   const initialDate = todayInputValue();
   const initialUnavailableSlots = getUnavailableSlotsForDate(
     initialDate,
@@ -77,6 +78,8 @@ export function BookingForm({ doctor }: BookingFormProps) {
       doctor.availableSlots,
     );
 
+    // If the selected slot becomes invalid for the new date, move to the
+    // next available option instead of leaving the form in a stale state.
     if (nextBookedSlots.includes(time) || nextUnavailableSlots.includes(time)) {
       const nextAvailableSlot =
         doctor.availableSlots.find(
@@ -133,6 +136,7 @@ export function BookingForm({ doctor }: BookingFormProps) {
     setError("");
 
     try {
+      // Simulates waiting for a booking endpoint before writing locally.
       await delay(BOOKING_MUTATION_DELAY_MS);
       addAppointment({
         doctorId: doctor.id,

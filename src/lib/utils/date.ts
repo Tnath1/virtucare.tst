@@ -18,6 +18,8 @@ export function formatAppointmentDate(date: string) {
 }
 
 function getSlotDateTime(date: string, time: string) {
+  // Slot labels are stored as display strings, so convert them into a Date
+  // before applying real booking cutoff rules.
   const match = time.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
 
   if (!match) {
@@ -50,6 +52,7 @@ export function isSlotBookable(date: string, time: string) {
   const bookingCutoff = new Date();
   bookingCutoff.setMinutes(bookingCutoff.getMinutes() + BOOKING_CUTOFF_MINUTES);
 
+  // Users can only book when the slot is more than 20 minutes away.
   return slotDateTime.getTime() > bookingCutoff.getTime();
 }
 

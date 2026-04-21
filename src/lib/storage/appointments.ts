@@ -48,6 +48,8 @@ export function saveAppointments(appointments: Appointment[]) {
   }
 
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(appointments));
+  // localStorage does not notify the same tab, so this event keeps local UI
+  // subscribed with useSyncExternalStore in sync after writes.
   window.dispatchEvent(new Event(STORAGE_EVENT));
 }
 
@@ -69,6 +71,7 @@ export function hasAppointmentConflict(
   appointments: Appointment[],
   appointmentSlot: AppointmentSlot,
 ) {
+  // Conflicts are scoped to the same doctor, same date, and same time only.
   return appointments.some(
     (appointment) =>
       appointment.doctorId === appointmentSlot.doctorId &&
@@ -93,6 +96,7 @@ export function getBookedSlotsForDoctorDate(
 export function addAppointment(appointmentInput: AppointmentInput) {
   const existingAppointments = getAppointments();
 
+  // Keep duplicate prevention in storage too, not only in the button state.
   if (hasAppointmentConflict(existingAppointments, appointmentInput)) {
     throw new Error("This appointment slot is already booked.");
   }
