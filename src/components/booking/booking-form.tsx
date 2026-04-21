@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 
 import { SlotPicker } from "@/components/booking/slot-picker";
 import { Button } from "@/components/shared/button";
@@ -20,6 +20,10 @@ import type { Doctor } from "@/types/doctor";
 
 type BookingFormProps = {
   doctor: Doctor;
+};
+
+type BookingFormSubmitEvent = {
+  preventDefault: () => void;
 };
 
 const BOOKING_MUTATION_DELAY_MS = 1200;
@@ -66,7 +70,12 @@ export function BookingForm({ doctor }: BookingFormProps) {
     setError("");
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleCloseSuccessModal() {
+    router.push("/");
+    setIsSuccessModalOpen(false);
+  }
+
+  async function handleSubmit(event: BookingFormSubmitEvent) {
     event.preventDefault();
 
     if (isBooking) {
@@ -190,18 +199,18 @@ export function BookingForm({ doctor }: BookingFormProps) {
           <div className="relative w-full max-w-md animate-[modal-pop_180ms_ease-out] rounded-lg bg-white p-6 text-center shadow-2xl">
             <button
               type="button"
-              className="absolute right-5 top-5 flex h-10 w-10 items-center justify-center text-slate-500 transition hover:text-slate-900"
+              className="absolute cursor-pointer right-5 top-5 flex h-10 w-10 items-center justify-center text-slate-500 transition hover:text-slate-900"
               aria-label="Close success modal"
-              onClick={() => setIsSuccessModalOpen(false)}
+              onClick={handleCloseSuccessModal}
             >
               <span className="sr-only">Close success modal</span>
               <span className="relative h-4 w-5">
-                <span className="absolute left-0 top-[7px] h-0.5 w-5 rotate-45 rounded-full bg-current" />
-                <span className="absolute left-0 top-[7px] h-0.5 w-5 -rotate-45 rounded-full bg-current" />
+                <span className="absolute left-0 top-1.75 h-0.5 w-5 rotate-45 rounded-full bg-current" />
+                <span className="absolute left-0 top-1.75 h-0.5 w-5 -rotate-45 rounded-full bg-current" />
               </span>
             </button>
 
-            <div className="mx-auto flex h-16 w-16 animate-[check-pop_300ms_ease-out] items-center justify-center rounded-full bg-green-100 text-green-600">
+            <div className="mx-auto mt-6 flex h-16 w-16 animate-[check-pop_300ms_ease-out] items-center justify-center rounded-full bg-green-100 text-green-600">
               <svg
                 aria-hidden="true"
                 viewBox="0 0 24 24"
