@@ -15,11 +15,14 @@ import {
   subscribeToAppointments,
 } from "@/lib/storage/appointments";
 import { todayInputValue } from "@/lib/utils/date";
+import { delay } from "@/lib/utils/delay";
 import type { Doctor } from "@/types/doctor";
 
 type BookingFormProps = {
   doctor: Doctor;
 };
+
+const BOOKING_MUTATION_DELAY_MS = 1200;
 
 export function BookingForm({ doctor }: BookingFormProps) {
   const router = useRouter();
@@ -36,6 +39,7 @@ export function BookingForm({ doctor }: BookingFormProps) {
   const [time, setTime] = useState(doctor.availableSlots[0] ?? "");
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
+  const [isBooking, setIsBooking] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const bookedSlots = useMemo(
     () => getBookedSlotsForDoctorDate(appointments, doctor.id, date),
@@ -62,8 +66,12 @@ export function BookingForm({ doctor }: BookingFormProps) {
     setError("");
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (isBooking) {
+      return;
+    }
 
     if (!date) {
       setError("Choose a date to continue.");
@@ -82,7 +90,11 @@ export function BookingForm({ doctor }: BookingFormProps) {
       return;
     }
 
+    setIsBooking(true);
+    setError("");
+
     try {
+      await delay(BOOKING_MUTATION_DELAY_MS);
       addAppointment({
         doctorId: doctor.id,
         doctorName: doctor.name,
@@ -91,12 +103,12 @@ export function BookingForm({ doctor }: BookingFormProps) {
         time,
         reason: reason.trim(),
       });
+      setIsSuccessModalOpen(true);
     } catch {
       setError("That time is already booked for this doctor on that day.");
-      return;
+    } finally {
+      setIsBooking(false);
     }
-
-    setIsSuccessModalOpen(true);
   }
 
   return (
@@ -137,6 +149,7 @@ export function BookingForm({ doctor }: BookingFormProps) {
             rows={4}
             placeholder="Briefly describe what you need help with."
             value={reason}
+            disabled={isBooking}
             onChange={(event) => setReason(event.target.value)}
           />
 
@@ -145,10 +158,20 @@ export function BookingForm({ doctor }: BookingFormProps) {
           ) : null}
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button type="submit">Confirm booking</Button>
+            <Button type="submit" disabled={isBooking}>
+              {isBooking ? (
+                <>
+                  <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  Booking...
+                </>
+              ) : (
+                "Confirm booking"
+              )}
+            </Button>
             <Button
               type="button"
               variant="secondary"
+              disabled={isBooking}
               onClick={() => router.back()}
             >
               Back
@@ -159,12 +182,25 @@ export function BookingForm({ doctor }: BookingFormProps) {
 
       {isSuccessModalOpen ? (
         <div
-          className="fixed inset-0 z-[80] flex min-h-dvh items-center justify-center bg-slate-900/30 px-4 backdrop-blur-sm"
+          className="fixed inset-0 z-80 flex min-h-dvh items-center justify-center bg-slate-900/30 px-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="booking-success-title"
         >
-          <div className="w-full max-w-md animate-[modal-pop_180ms_ease-out] rounded-lg bg-white p-6 text-center shadow-2xl">
+          <div className="relative w-full max-w-md animate-[modal-pop_180ms_ease-out] rounded-lg bg-white p-6 text-center shadow-2xl">
+            <button
+              type="button"
+              className="absolute right-5 top-5 flex h-10 w-10 items-center justify-center text-slate-500 transition hover:text-slate-900"
+              aria-label="Close success modal"
+              onClick={() => setIsSuccessModalOpen(false)}
+            >
+              <span className="sr-only">Close success modal</span>
+              <span className="relative h-4 w-5">
+                <span className="absolute left-0 top-[7px] h-0.5 w-5 rotate-45 rounded-full bg-current" />
+                <span className="absolute left-0 top-[7px] h-0.5 w-5 -rotate-45 rounded-full bg-current" />
+              </span>
+            </button>
+
             <div className="mx-auto flex h-16 w-16 animate-[check-pop_300ms_ease-out] items-center justify-center rounded-full bg-green-100 text-green-600">
               <svg
                 aria-hidden="true"

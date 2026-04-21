@@ -5,10 +5,12 @@ import type { Appointment } from "@/types/appointment";
 type AppointmentCardProps = {
   appointment: Appointment;
   onCancel: (appointmentId: string) => void;
+  isCanceling?: boolean;
 };
 
 export function AppointmentCard({
   appointment,
+  isCanceling = false,
   onCancel,
 }: AppointmentCardProps) {
   return (
@@ -31,9 +33,17 @@ export function AppointmentCard({
         <Button
           type="button"
           variant="danger"
+          disabled={isCanceling}
           onClick={() => onCancel(appointment.id)}
         >
-          Cancel
+          {isCanceling ? (
+            <>
+              <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              Canceling...
+            </>
+          ) : (
+            "Cancel"
+          )}
         </Button>
       </div>
     </article>
