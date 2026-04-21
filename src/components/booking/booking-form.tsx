@@ -14,7 +14,7 @@ import {
   parseAppointmentsSnapshot,
   subscribeToAppointments,
 } from "@/lib/storage/appointments";
-import { todayInputValue } from "@/lib/utils/date";
+import { getUnavailableSlotsForDate, todayInputValue } from "@/lib/utils/date";
 import { delay } from "@/lib/utils/delay";
 import type { Doctor } from "@/types/doctor";
 
@@ -30,6 +30,15 @@ const BOOKING_MUTATION_DELAY_MS = 1200;
 
 export function BookingForm({ doctor }: BookingFormProps) {
   const router = useRouter();
+  const initialDate = todayInputValue();
+  const initialUnavailableSlots = getUnavailableSlotsForDate(
+    initialDate,
+    doctor.availableSlots,
+  );
+  const initialAvailableSlot =
+    doctor.availableSlots.find(
+      (slot) => !initialUnavailableSlots.includes(slot),
+    ) ?? "";
   const appointmentsSnapshot = useSyncExternalStore(
     subscribeToAppointments,
     getAppointmentsSnapshot,
@@ -39,8 +48,8 @@ export function BookingForm({ doctor }: BookingFormProps) {
     () => parseAppointmentsSnapshot(appointmentsSnapshot),
     [appointmentsSnapshot],
   );
-  const [date, setDate] = useState(todayInputValue());
-  const [time, setTime] = useState(doctor.availableSlots[0] ?? "");
+  const [date, setDate] = useState(initialDate);
+  const [time, setTime] = useState(initialAvailableSlot);
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
   const [isBooking, setIsBooking] = useState(false);
@@ -48,6 +57,10 @@ export function BookingForm({ doctor }: BookingFormProps) {
   const bookedSlots = useMemo(
     () => getBookedSlotsForDoctorDate(appointments, doctor.id, date),
     [appointments, date, doctor.id],
+  );
+  const unavailableSlots = useMemo(
+    () => getUnavailableSlotsForDate(date, doctor.availableSlots),
+    [date, doctor.availableSlots],
   );
 
   function handleDateChange(nextDate: string) {
@@ -59,9 +72,20 @@ export function BookingForm({ doctor }: BookingFormProps) {
       doctor.id,
       nextDate,
     );
+    const nextUnavailableSlots = getUnavailableSlotsForDate(
+      nextDate,
+      doctor.availableSlots,
+    );
 
-    if (nextBookedSlots.includes(time)) {
-      setTime("");
+    if (nextBookedSlots.includes(time) || nextUnavailableSlots.includes(time)) {
+      const nextAvailableSlot =
+        doctor.availableSlots.find(
+          (slot) =>
+            !nextBookedSlots.includes(slot) &&
+            !nextUnavailableSlots.includes(slot),
+        ) ?? "";
+
+      setTime(nextAvailableSlot);
     }
   }
 
@@ -92,6 +116,12 @@ export function BookingForm({ doctor }: BookingFormProps) {
     }
     if (bookedSlots.includes(time)) {
       setError("That time is already booked for this doctor on that day.");
+      return;
+    }
+    if (unavailableSlots.includes(time)) {
+      setError(
+        "Choose a time that has not passed and is more than 20 minutes away.",
+      );
       return;
     }
     if (!reason.trim()) {
@@ -148,6 +178,7 @@ export function BookingForm({ doctor }: BookingFormProps) {
           <SlotPicker
             slots={doctor.availableSlots}
             bookedSlots={bookedSlots}
+            unavailableSlots={unavailableSlots}
             selectedSlot={time}
             onSelect={handleTimeSelect}
           />

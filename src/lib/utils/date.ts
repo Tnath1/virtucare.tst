@@ -1,5 +1,12 @@
+const BOOKING_CUTOFF_MINUTES = 20;
+
 export function todayInputValue() {
-  return new Date().toISOString().slice(0, 10);
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 export function formatAppointmentDate(date: string) {
@@ -8,4 +15,44 @@ export function formatAppointmentDate(date: string) {
     day: "numeric",
     year: "numeric",
   }).format(new Date(`${date}T00:00:00`));
+}
+
+function getSlotDateTime(date: string, time: string) {
+  const match = time.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, rawHour, rawMinute, period] = match;
+  let hour = Number(rawHour);
+  const minute = Number(rawMinute);
+
+  if (period.toUpperCase() === "PM" && hour !== 12) {
+    hour += 12;
+  }
+
+  if (period.toUpperCase() === "AM" && hour === 12) {
+    hour = 0;
+  }
+
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year, month - 1, day, hour, minute);
+}
+
+export function isSlotBookable(date: string, time: string) {
+  const slotDateTime = getSlotDateTime(date, time);
+
+  if (!slotDateTime) {
+    return false;
+  }
+
+  const bookingCutoff = new Date();
+  bookingCutoff.setMinutes(bookingCutoff.getMinutes() + BOOKING_CUTOFF_MINUTES);
+
+  return slotDateTime.getTime() > bookingCutoff.getTime();
+}
+
+export function getUnavailableSlotsForDate(date: string, slots: string[]) {
+  return slots.filter((slot) => !isSlotBookable(date, slot));
 }
