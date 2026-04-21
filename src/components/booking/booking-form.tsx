@@ -1,13 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState, useSyncExternalStore } from "react";
 
 import { SlotPicker } from "@/components/booking/slot-picker";
 import { Button } from "@/components/shared/button";
 import { Input } from "@/components/shared/input";
 import { Textarea } from "@/components/shared/textarea";
-import { addAppointment } from "@/lib/storage/appointments";
+import {
+  addAppointment,
+  getAppointmentsSnapshot,
+  getBookedSlotsForDoctorDate,
+  parseAppointmentsSnapshot,
+  subscribeToAppointments,
+} from "@/lib/storage/appointments";
 import { todayInputValue } from "@/lib/utils/date";
 import type { Doctor } from "@/types/doctor";
 
@@ -17,35 +23,77 @@ type BookingFormProps = {
 
 export function BookingForm({ doctor }: BookingFormProps) {
   const router = useRouter();
+  const appointmentsSnapshot = useSyncExternalStore(
+    subscribeToAppointments,
+    getAppointmentsSnapshot,
+    () => "[]",
+  );
+  const appointments = useMemo(
+    () => parseAppointmentsSnapshot(appointmentsSnapshot),
+    [appointmentsSnapshot],
+  );
   const [date, setDate] = useState(todayInputValue());
   const [time, setTime] = useState(doctor.availableSlots[0] ?? "");
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
+  const bookedSlots = useMemo(
+    () => getBookedSlotsForDoctorDate(appointments, doctor.id, date),
+    [appointments, date, doctor.id],
+  );
+
+  function handleDateChange(nextDate: string) {
+    setDate(nextDate);
+    setError("");
+
+    const nextBookedSlots = getBookedSlotsForDoctorDate(
+      appointments,
+      doctor.id,
+      nextDate,
+    );
+
+    if (nextBookedSlots.includes(time)) {
+      setTime("");
+    }
+  }
+
+  function handleTimeSelect(nextTime: string) {
+    setTime(nextTime);
+    setError("");
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!date ) {
+    if (!date) {
       setError("Choose a date to continue.");
       return;
     }
-    if ( !time ) {
+    if (!time) {
       setError("Choose time of your appointment to continue.");
       return;
     }
-    if ( !reason.trim()) {
+    if (bookedSlots.includes(time)) {
+      setError("That time is already booked for this doctor on that day.");
+      return;
+    }
+    if (!reason.trim()) {
       setError("Choose a reason for booking an appointment.");
       return;
     }
 
-    addAppointment({
-      doctorId: doctor.id,
-      doctorName: doctor.name,
-      specialty: doctor.specialty,
-      date,
-      time,
-      reason: reason.trim(),
-    });
+    try {
+      addAppointment({
+        doctorId: doctor.id,
+        doctorName: doctor.name,
+        specialty: doctor.specialty,
+        date,
+        time,
+        reason: reason.trim(),
+      });
+    } catch {
+      setError("That time is already booked for this doctor on that day.");
+      return;
+    }
 
     router.push("/appointments");
   }
@@ -69,13 +117,14 @@ export function BookingForm({ doctor }: BookingFormProps) {
           type="date"
           min={todayInputValue()}
           value={date}
-          onChange={(event) => setDate(event.target.value)}
+          onChange={(event) => handleDateChange(event.target.value)}
         />
 
         <SlotPicker
           slots={doctor.availableSlots}
+          bookedSlots={bookedSlots}
           selectedSlot={time}
-          onSelect={setTime}
+          onSelect={handleTimeSelect}
         />
 
         <Textarea
